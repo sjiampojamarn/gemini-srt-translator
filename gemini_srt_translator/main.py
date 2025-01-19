@@ -80,10 +80,15 @@ class GeminiSRTTranslator:
             raise Exception("Please provide a subtitle file.")
         
         if not self.output_file:
-            self.output_file = ".".join(self.input_file.split(".")[:-1]) + "_translated.srt"
+            self.output_file = ".".join(self.input_file.split(".")[:-1]) + ".translated_" + self.target_language + ".srt"
 
-        instruction = f"""You are an assistant that translates subtitles to {self.target_language}.
-You will receive the following JSON type:
+        instruction = f"""You are a professional translator proficient in all languages, specializing in translating subtitles for film and television.
+        Your task is to translate the following subtitles into {self.target_language}.
+        Your translation should be faithful to the original meaning and tone while also being culturally appropriate for a {self.target_language}-speaking audiences.
+        Pay particular attention to the accurate and nuanced translation of humor, idioms, and cultural references.
+        The final translation should be suitable for direct use in subtitles.
+
+        You will receive the following JSON type:
 
 class SubtitleObject(typing.TypedDict):
     index: str
@@ -140,6 +145,7 @@ The size of the list must remain the same as the one you received."""
                     start_time = time.time()
                     previous_message = self._process_batch(model, batch, previous_message, translated_subtitle)
                     end_time = time.time()
+                    print(self.input_file)
                     print(f"Translated {i}/{total}")
                     if delay and (end_time - start_time < delay_time):
                         time.sleep(30 - (end_time - start_time))
@@ -174,6 +180,7 @@ The size of the list must remain the same as the one you received."""
                             print(e_str)
                         else:
                             print("An unexpected error has occurred")
+                            print(e_str)
                         print("Decreasing batch size to {} and trying again...".format(self.batch_size))
             
             translated_file.write(srt.compose(translated_subtitle))
@@ -237,9 +244,17 @@ The size of the list must remain the same as the one you received."""
             messages = [previous_message] + [{"role": "user", "parts": json.dumps(batch, ensure_ascii=False)}]
         else:
             messages = [{"role": "user", "parts": json.dumps(batch, ensure_ascii=False)}]
+
         response = model.generate_content(messages)
         translated_lines: list[SubtitleObject] = json.loads(response.text)
-        
+
+        # Sampled logging at 30% rate
+        if (int(time.time()) % 3 == 1):
+            print("input:")
+            print(messages)
+            print("response:")
+            print(response.text)
+
         if len(translated_lines) != len(batch):
             raise Exception("Gemini has returned the wrong number of lines.")
             
