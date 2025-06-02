@@ -225,6 +225,7 @@ subtitle segment 3
         if self.extract_srt_from_media:
             try:
                 ffmpeg = FFmpeg().input(self.input_file).output(f"""{self.input_file}.srt.tmp""", {"c:s" : "text", "f" : "srt"})
+                print(f"""Extracting srt from {self.input_file}""")
                 ffmpeg.execute()
                 self.input_file = f"""{self.input_file}.srt.tmp"""
             except Exception as e:
